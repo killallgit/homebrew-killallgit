@@ -1,0 +1,114 @@
+name: Update Formula
+
+on:
+  repository_dispatch:
+    types: [formula-update]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update to (without v prefix)'
+        required: true
+        type: string
+      macos_arm64_sha256:
+        description: 'SHA256 for macOS ARM64'
+        required: true
+        type: string
+      macos_x86_64_sha256:
+        description: 'SHA256 for macOS x86_64'
+        required: true
+        type: string
+      linux_x86_64_sha256:
+        description: 'SHA256 for Linux x86_64'
+        required: true
+        type: string
+      linux_arm64_sha256:
+        description: 'SHA256 for Linux ARM64'
+        required: true
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set variables from dispatch
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+            echo "macos_arm64_sha256=${{ github.event.client_payload.macos_arm64_sha256 }}" >> $GITHUB_OUTPUT
+            echo "macos_x86_64_sha256=${{ github.event.client_payload.macos_x86_64_sha256 }}" >> $GITHUB_OUTPUT
+            echo "linux_x86_64_sha256=${{ github.event.client_payload.linux_x86_64_sha256 }}" >> $GITHUB_OUTPUT
+            echo "linux_arm64_sha256=${{ github.event.client_payload.linux_arm64_sha256 }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "macos_arm64_sha256=${{ inputs.macos_arm64_sha256 }}" >> $GITHUB_OUTPUT
+            echo "macos_x86_64_sha256=${{ inputs.macos_x86_64_sha256 }}" >> $GITHUB_OUTPUT
+            echo "linux_x86_64_sha256=${{ inputs.linux_x86_64_sha256 }}" >> $GITHUB_OUTPUT
+            echo "linux_arm64_sha256=${{ inputs.linux_arm64_sha256 }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Formula
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+          MACOS_ARM64_SHA: ${{ steps.vars.outputs.macos_arm64_sha256 }}
+          MACOS_X86_64_SHA: ${{ steps.vars.outputs.macos_x86_64_sha256 }}
+          LINUX_X86_64_SHA: ${{ steps.vars.outputs.linux_x86_64_sha256 }}
+          LINUX_ARM64_SHA: ${{ steps.vars.outputs.linux_arm64_sha256 }}
+        run: |
+          cat > Formula/killallgit.rb << EOF
+          class Killallgit < Formula
+            desc "CLI tool for managing git worktrees and cleaning up branches"
+            homepage "https://github.com/killallgit/killallgit"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/killallgit/killallgit/releases/download/v#{version}/killallgit-macos-aarch64.tar.gz"
+                sha256 "${MACOS_ARM64_SHA}"
+              end
+              on_intel do
+                url "https://github.com/killallgit/killallgit/releases/download/v#{version}/killallgit-macos-x86_64.tar.gz"
+                sha256 "${MACOS_X86_64_SHA}"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/killallgit/killallgit/releases/download/v#{version}/killallgit-linux-aarch64.tar.gz"
+                sha256 "${LINUX_ARM64_SHA}"
+              end
+              on_intel do
+                url "https://github.com/killallgit/killallgit/releases/download/v#{version}/killallgit-linux-x86_64.tar.gz"
+                sha256 "${LINUX_X86_64_SHA}"
+              end
+            end
+
+            def install
+              bin.install "killallgit"
+            end
+
+            test do
+              assert_match "killallgit", shell_output("#{bin}/killallgit --help")
+            end
+          end
+          EOF
+
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' Formula/killallgit.rb
+
+          echo "Updated formula:"
+          cat Formula/killallgit.rb
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/killallgit.rb
+          git diff --staged --quiet || git commit -m "Update killallgit to v${{ steps.vars.outputs.version }}"
+          git push
