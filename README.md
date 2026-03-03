@@ -1,18 +1,27 @@
-# Homebrew Tap for killallgit
+# Homebrew Tap
 
-This is the official [Homebrew](https://brew.sh) tap for [killallgit](https://github.com/killallgit/killallgit).
+Official [Homebrew](https://brew.sh) tap for [killallgit](https://github.com/killallgit) tools.
 
 ## Installation
 
 ```bash
 brew tap killallgit/killallgit
+```
+
+### killallgit
+
+CLI tool for managing git worktrees and cleaning up branches.
+
+```bash
 brew install killallgit
 ```
 
-Or install directly:
+### killalltofu
+
+Schedule automatic destruction of Terraform/OpenTofu infrastructure.
 
 ```bash
-brew install killallgit/killallgit/killallgit
+brew install killalltofu
 ```
 
 ## Updating
@@ -20,15 +29,8 @@ brew install killallgit/killallgit/killallgit
 ```bash
 brew update
 brew upgrade killallgit
+brew upgrade killalltofu
 ```
-
-## About killallgit
-
-A CLI tool for managing git worktrees and cleaning up branches. Features include:
-
-- **Add worktrees** - Create new git worktrees by name
-- **Clean worktrees** - Remove git worktrees with regex pattern matching
-- **Clean branches** - Remove local or remote branches with pattern matching
 
 ## Supported Platforms
 
